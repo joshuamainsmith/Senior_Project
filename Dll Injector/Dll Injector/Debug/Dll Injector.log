@@ -1,0 +1,3 @@
+﻿  Dll Injector.cpp
+C:\Users\Matteo\source\repos\Dll Injector\Dll Injector\Dll Injector.cpp(14,12): warning C4101: 'snapshot': unreferenced local variable
+  Dll Injector.vcxproj -> C:\Users\Matteo\Documents\Respondus_Project\Injector\Dll Injector.exe
