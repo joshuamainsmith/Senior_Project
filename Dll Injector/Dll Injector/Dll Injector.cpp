@@ -7,14 +7,39 @@
 #include "tlhelp32.h"
 #include <tchar.h>
 
-int main()
+BOOL IsElevated() {
+    BOOL fRet = FALSE;
+    HANDLE hToken = NULL;
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+        TOKEN_ELEVATION Elevation;
+        DWORD cbSize = sizeof(TOKEN_ELEVATION);
+        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
+            fRet = Elevation.TokenIsElevated;
+        }
+    }
+    if (hToken) {
+        CloseHandle(hToken);
+    }
+    return fRet;
+}
+
+BOOL FileExists(LPCTSTR path)
+{
+    DWORD retVal = GetFileAttributes(path);
+    return retVal != INVALID_FILE_ATTRIBUTES && !(retVal & FILE_ATTRIBUTE_DIRECTORY);
+}
+
+int main(int argc, char *argv[])
 {
     STARTUPINFO si;
     PROCESS_INFORMATION pi;
     HANDLE snapshot;
     THREADENTRY32 entry;
     TCHAR dllPath[256];
+    TCHAR dllName[256];
     DWORD pathSize, retval = 0;
+    LPTSTR lockDown = _tcsdup(TEXT("\"C:\\Program Files (x86)\\Respondus\\LockDown Browser\\LockDownBrowser.exe\""));
+
 
     ZeroMemory(&si, sizeof(si));
     ZeroMemory(&pi, sizeof(pi));
@@ -22,9 +47,23 @@ int main()
     si.cb = sizeof(si);
     entry.dwSize = sizeof(entry);
 
-    LPTSTR lockDown = _tcsdup(TEXT("\"C:\\Program Files (x86)\\Respondus\\LockDown Browser\\LockDownBrowser.exe\""));
-    LPTSTR notepad = _tcsdup(TEXT("\"C:\\Windows\\System32\\notepad.exe\""));
-    LPCSTR dllName = "bypass.dll";
+    switch (argc)
+    {
+    case 1:
+        printf("Usage: DLL Injector.exe [dll name]\n");
+        printf("The DLL has to be placed in the same directory as the injector.\n");
+        return -1;
+
+    case 2:
+        sprintf_s(dllName, "%s", argv[1]);
+        break;
+    }
+
+    if (!IsElevated())
+    {
+        printf("[-] Process is not running as admin. Make sure to run process as Admin.\n");
+        return -1;
+    }
 
     // Start the child process. 
     if (!CreateProcess(NULL,   // No module name (use command line)
@@ -51,7 +90,10 @@ int main()
         printf("[-] GetFullPathNameA failed: %d\n", GetLastError());
     }
 
-    //const char* dllPath = "C:\\Users\\Matteo\\Documents\\Respondus_Project\\Injector\\bypass.dll";
+    if (!FileExists(dllPath))
+    {
+        printf("[-] Filename is invalid.\n");
+    }
 
     LPVOID dllAddressInRespondus = VirtualAllocEx(pi.hProcess, NULL, pathSize + 1, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
 
@@ -61,7 +103,7 @@ int main()
         return -1;
     }
 
-    if (!WriteProcessMemory(pi.hProcess, dllAddressInRespondus, dllPath, pathSize + 1, NULL))
+    if (!WriteProcessMemory(pi.hProcess, dllAddressInRespondus, dllPath, pathSize, NULL))
     {
         printf("[-] WriteProcessMemory Failed: %d.\n", GetLastError());
         return -1;
