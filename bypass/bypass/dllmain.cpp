@@ -2,6 +2,7 @@
 #include "pch.h"
 #include "detours.h"
 #include "Windows.h"
+#include "Shlobj.h"
 
 struct WindowData
 {
@@ -28,7 +29,18 @@ static BOOL(WINAPI* TrueShowWindow)(HWND hWnd, int nCmdShow) = ShowWindow;
 BOOL WriteLog(LPCSTR message, LPCSTR loggedReg, const BYTE* data, DWORD dataSize)
 {
     DWORD bytesWritten = 0;
-    HANDLE hFile = CreateFile(L"C:\\Users\\Matteo\\Desktop\\log.txt", FILE_APPEND_DATA, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    LPWSTR desktopPath;
+    TCHAR logPath[256];
+
+
+    if (SHGetKnownFolderPath(FOLDERID_Desktop, 0, NULL, &desktopPath) != S_OK)
+    {
+        return false;
+    }
+
+    wsprintf(logPath, L"%s%s", desktopPath, L"\\log.txt");
+
+    HANDLE hFile = CreateFile(logPath, FILE_APPEND_DATA, 0, NULL, OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE)
         return false;
 
