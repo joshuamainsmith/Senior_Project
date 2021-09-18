@@ -24,6 +24,7 @@ static LSTATUS(WINAPI* TrueRegCreateKeyA)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkR
 static BOOL(WINAPI* TrueEmptyClipboard)() = EmptyClipboard;
 static HWND(WINAPI* TrueGetForegroundWindow)() = GetForegroundWindow;
 static BOOL(WINAPI* TrueShowWindow)(HWND hWnd, int nCmdShow) = ShowWindow;
+static BOOL(WINAPI* TrueTerminateProcess)(HANDLE hProcess, UINT uExitCode) = TerminateProcess;
 //static HHOOK(WINAPI* TrueSetWindowsHookExA)(int idHook, HOOKPROC lpfn, HINSTANCE hmod, )
 
 BOOL WriteLog(LPCSTR message, LPCSTR loggedReg, const BYTE* data, DWORD dataSize)
@@ -162,6 +163,11 @@ BOOL WINAPI NewShowWindow(HWND hWnd, int nCmdShow)
     return TrueShowWindow(hWnd, nCmdShow);
 }
 
+BOOL WINAPI NewTerminateProcess(HANDLE hProcess, UINT uExitCode)
+{
+    return 1;
+}
+
 LRESULT NewMouseHook_1(int nCode, WPARAM arg2, LPARAM arg3)
 {
     static PVOID *mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
@@ -206,6 +212,7 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)TrueRegOpenKeyExA, NewRegOpenKeyExA);
         DetourAttach(&(PVOID&)TrueRegQueryValueExA, NewRegQueryValueExA);
         DetourAttach(&(PVOID&)TrueRegSetValueExA, NewRegSetValueExA);
+        DetourAttach(&(PVOID&)TrueTerminateProcess, NewTerminateProcess);
         //DetourAttach(&(PVOID&)TrueShowWindow, NewShowWindow);
         DetourAttach(&(PVOID&)mouseHookProc_1, NewMouseHook_1);
         DetourAttach(&(PVOID&)mouseHookProc_2, NewMouseHook_2);

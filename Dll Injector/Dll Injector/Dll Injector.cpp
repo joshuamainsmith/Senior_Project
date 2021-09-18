@@ -7,13 +7,17 @@
 #include "tlhelp32.h"
 #include <tchar.h>
 
-BOOL IsElevated() {
+BOOL IsElevated()
+{
     BOOL fRet = FALSE;
     HANDLE hToken = NULL;
-    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) {
+
+    if (OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken)) 
+    {
         TOKEN_ELEVATION Elevation;
         DWORD cbSize = sizeof(TOKEN_ELEVATION);
-        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) {
+        if (GetTokenInformation(hToken, TokenElevation, &Elevation, sizeof(Elevation), &cbSize)) 
+        {
             fRet = Elevation.TokenIsElevated;
         }
     }
@@ -61,7 +65,7 @@ int main(int argc, char *argv[])
 
     if (!IsElevated())
     {
-        printf("[-] Process is not running as admin. Make sure to run process as Admin.\n");
+        printf("[-] Process is not elevated. Make sure to run process as Admin.\n");
         return -1;
     }
 
@@ -71,7 +75,7 @@ int main(int argc, char *argv[])
         NULL,           // Process handle not inheritable
         NULL,           // Thread handle not inheritable
         FALSE,          // Set handle inheritance to FALSE
-        CREATE_SUSPENDED,              // No creation flags
+        CREATE_SUSPENDED,              // Create as suspended
         NULL,           // Use parent's environment block
         NULL,           // Use parent's starting directory 
         &si,            // Pointer to STARTUPINFO structure
@@ -82,11 +86,11 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    WaitForSingleObject(pi.hProcess, 2000);
+    WaitForSingleObject(pi.hProcess, 1000);
 
     pathSize = GetFullPathNameA(dllName, 256, dllPath, NULL);
     if ( pathSize == 0)
-    {
+    { 
         printf("[-] GetFullPathNameA failed: %d\n", GetLastError());
     }
 
