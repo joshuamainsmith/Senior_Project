@@ -10,7 +10,7 @@ struct WindowData
     HWND windowHandle;
 };
 
-static LRESULT(__stdcall* mouseHookProc_1)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT (__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x1310);
+static LRESULT(__stdcall* mouseHookProc_1)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x1310);
 static LRESULT(__stdcall* mouseHookProc_2)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x1250);
 static LRESULT(__stdcall* shellHookProc)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x13a0);
 static LRESULT(__stdcall* keyboardHookProc)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x11d0);
@@ -22,9 +22,11 @@ static LSTATUS(WINAPI* TrueRegOpenKeyA)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkRes
 static LSTATUS(WINAPI* TrueRegDeleteValueA)(HKEY hKey, LPCSTR lpValueName) = RegDeleteValueA;
 static LSTATUS(WINAPI* TrueRegCreateKeyA)(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult) = RegCreateKeyA;
 static BOOL(WINAPI* TrueEmptyClipboard)() = EmptyClipboard;
-static HWND(WINAPI* TrueGetForegroundWindow)() = GetForegroundWindow;
+//static HWND(WINAPI* TrueGetForegroundWindow)() = GetForegroundWindow;
 static BOOL(WINAPI* TrueShowWindow)(HWND hWnd, int nCmdShow) = ShowWindow;
 static BOOL(WINAPI* TrueTerminateProcess)(HANDLE hProcess, UINT uExitCode) = TerminateProcess;
+static BOOL(WINAPI* TrueSetForegroundWindow)(HWND hWnd) = SetForegroundWindow;
+static HWND(WINAPI* TrueGetForegroundWindow)() = GetForegroundWindow;
 //static HHOOK(WINAPI* TrueSetWindowsHookExA)(int idHook, HOOKPROC lpfn, HINSTANCE hmod, )
 
 BOOL WriteLog(LPCSTR message, LPCSTR loggedReg, const BYTE* data, DWORD dataSize)
@@ -138,7 +140,7 @@ BOOL CALLBACK EnumCallback(HWND handle, LPARAM lparam)
     data.windowHandle = handle;
     return false;
 }
-
+/*
 HWND WINAPI NewGetForegroundWindow()
 {
     WindowData data;
@@ -149,7 +151,7 @@ HWND WINAPI NewGetForegroundWindow()
 
     return data.windowHandle;
 }
-
+*/
 BOOL WINAPI NewShowWindow(HWND hWnd, int nCmdShow)
 {
     TCHAR windowName[128];
@@ -168,34 +170,44 @@ BOOL WINAPI NewTerminateProcess(HANDLE hProcess, UINT uExitCode)
     return 1;
 }
 
+BOOL WINAPI NewSetForegroundWindow(HANDLE hWnd)
+{
+    return 1;
+}
+
+HWND WINAPI NewGetForegroundWindow()
+{
+    return FindWindowA("LOCKDOWNCHROME", "Respondus LockDown Browser");
+}
+
 LRESULT NewMouseHook_1(int nCode, WPARAM arg2, LPARAM arg3)
 {
-    static PVOID *mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
+    static PVOID* mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
     return CallNextHookEx((HHOOK)*mouseHook, nCode, arg2, arg3);
 }
 
 LRESULT NewMouseHook_2(int nCode, WPARAM arg2, LPARAM arg3)
 {
-    static PVOID *mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
+    static PVOID* mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
     return CallNextHookEx((HHOOK)*mouseHook, nCode, arg2, arg3);
 }
 
 LRESULT NewShellHook(int nCode, WPARAM arg2, LPARAM arg3)
 {
-    static PVOID *shellHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14004);
+    static PVOID* shellHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14004);
     return CallNextHookEx((HHOOK)*shellHook, nCode, arg2, arg3);
 }
 
 LRESULT NewKeyboardHook(int nCode, WPARAM arg2, LPARAM arg3)
 {
-    static PVOID *keyboardHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14000);
+    static PVOID* keyboardHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14000);
     return CallNextHookEx((HHOOK)*keyboardHook, nCode, arg2, arg3);
 }
 
-BOOL APIENTRY DllMain( HMODULE hModule,
-                       DWORD  ul_reason_for_call,
-                       LPVOID lpReserved
-                     )
+BOOL APIENTRY DllMain(HMODULE hModule,
+    DWORD  ul_reason_for_call,
+    LPVOID lpReserved
+)
 {
     switch (ul_reason_for_call)
     {
@@ -213,6 +225,8 @@ BOOL APIENTRY DllMain( HMODULE hModule,
         DetourAttach(&(PVOID&)TrueRegQueryValueExA, NewRegQueryValueExA);
         DetourAttach(&(PVOID&)TrueRegSetValueExA, NewRegSetValueExA);
         DetourAttach(&(PVOID&)TrueTerminateProcess, NewTerminateProcess);
+        DetourAttach(&(PVOID&)TrueSetForegroundWindow, NewSetForegroundWindow);
+        //DetourAttach(&(PVOID&)TrueSetForegroundWindow, NewGetForegroundWindow);
         //DetourAttach(&(PVOID&)TrueShowWindow, NewShowWindow);
         DetourAttach(&(PVOID&)mouseHookProc_1, NewMouseHook_1);
         DetourAttach(&(PVOID&)mouseHookProc_2, NewMouseHook_2);
