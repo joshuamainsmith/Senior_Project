@@ -27,6 +27,7 @@ static BOOL(WINAPI* TrueShowWindow)(HWND hWnd, int nCmdShow) = ShowWindow;
 static BOOL(WINAPI* TrueTerminateProcess)(HANDLE hProcess, UINT uExitCode) = TerminateProcess;
 static BOOL(WINAPI* TrueSetForegroundWindow)(HWND hWnd) = SetForegroundWindow;
 static HWND(WINAPI* TrueGetForegroundWindow)() = GetForegroundWindow;
+//static BOOL(WINAPI* TrueShowWindow)(HWND hWnd, int  nCmdShow) = ShowWindow;
 //static HHOOK(WINAPI* TrueSetWindowsHookExA)(int idHook, HOOKPROC lpfn, HINSTANCE hmod, )
 
 BOOL WriteLog(LPCSTR message, LPCSTR loggedReg, const BYTE* data, DWORD dataSize)
@@ -152,7 +153,7 @@ HWND WINAPI NewGetForegroundWindow()
     return data.windowHandle;
 }
 */
-BOOL WINAPI NewShowWindow(HWND hWnd, int nCmdShow)
+/*BOOL WINAPI NewShowWindow(HWND hWnd, int nCmdShow)
 {
     TCHAR windowName[128];
 
@@ -163,7 +164,7 @@ BOOL WINAPI NewShowWindow(HWND hWnd, int nCmdShow)
     }
 
     return TrueShowWindow(hWnd, nCmdShow);
-}
+}*/
 
 BOOL WINAPI NewTerminateProcess(HANDLE hProcess, UINT uExitCode)
 {
@@ -178,6 +179,16 @@ BOOL WINAPI NewSetForegroundWindow(HANDLE hWnd)
 HWND WINAPI NewGetForegroundWindow()
 {
     return FindWindowA("LOCKDOWNCHROME", "Respondus LockDown Browser");
+}
+
+BOOL WINAPI NewShowWindow(HWND hWnd, int  nCmdShow)
+{
+    if (hWnd == FindWindowA("Shell_TrayWnd", ""))
+    {
+        return 1;
+    }
+
+    return TrueShowWindow(hWnd, nCmdShow);
 }
 
 LRESULT NewMouseHook_1(int nCode, WPARAM arg2, LPARAM arg3)
@@ -227,7 +238,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         DetourAttach(&(PVOID&)TrueTerminateProcess, NewTerminateProcess);
         DetourAttach(&(PVOID&)TrueSetForegroundWindow, NewSetForegroundWindow);
         //DetourAttach(&(PVOID&)TrueSetForegroundWindow, NewGetForegroundWindow);
-        //DetourAttach(&(PVOID&)TrueShowWindow, NewShowWindow);
+        DetourAttach(&(PVOID&)TrueShowWindow, NewShowWindow);
         DetourAttach(&(PVOID&)mouseHookProc_1, NewMouseHook_1);
         DetourAttach(&(PVOID&)mouseHookProc_2, NewMouseHook_2);
         DetourAttach(&(PVOID&)shellHookProc, NewShellHook);
@@ -249,7 +260,7 @@ BOOL APIENTRY DllMain(HMODULE hModule,
         DetourDetach(&(PVOID&)TrueRegOpenKeyExA, NewRegOpenKeyExA);
         DetourDetach(&(PVOID&)TrueRegQueryValueExA, NewRegQueryValueExA);
         DetourDetach(&(PVOID&)TrueRegSetValueExA, NewRegSetValueExA);
-        //DetourDetach(&(PVOID&)TrueShowWindow, NewShowWindow);
+        DetourDetach(&(PVOID&)TrueShowWindow, NewShowWindow);
         DetourDetach(&(PVOID&)mouseHookProc_1, NewMouseHook_1);
         DetourDetach(&(PVOID&)mouseHookProc_2, NewMouseHook_2);
         DetourDetach(&(PVOID&)shellHookProc, NewShellHook);
