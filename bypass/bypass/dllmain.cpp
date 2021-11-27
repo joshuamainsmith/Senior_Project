@@ -3,12 +3,17 @@
 #include "detours.h"
 #include "Windows.h"
 #include "Shlobj.h"
+#include <fstream>
+
+using namespace std;
 
 struct WindowData
 {
     unsigned long pid;
     HWND windowHandle;
 };
+
+unsigned long num[15];
 
 static LRESULT(__stdcall* mouseHookProc_1)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x1310);
 static LRESULT(__stdcall* mouseHookProc_2)(int nCode, WPARAM arg2, LPARAM arg3) = (LRESULT(__stdcall*)(int, WPARAM, LPARAM))((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x1250);
@@ -64,11 +69,31 @@ BOOL WriteLog(LPCSTR message, LPCSTR loggedReg, const BYTE* data, DWORD dataSize
     return true;
 }
 
+BOOL AccessLog(LPCSTR APICall, unsigned long num)
+{
+    fstream file;
+    
+    string apicall = APICall;
+    string filename = "logs/";
+    filename = filename + apicall + ".txt";
+    file.open(filename, ios::out);
+
+    //file.open("logs/logs.txt", ios::out);
+    //appending the message to the file
+    file << APICall << ": " << num << endl;
+    //closing the file
+    file.close();
+
+    return true;
+}
+
 LSTATUS WINAPI NewRegSetValueExA(HKEY hKey, LPCSTR lpValueName, DWORD Reserved, DWORD dwType, const BYTE* lpData, DWORD cbData)
 {
     LPCSTR message = "Registry Key Value Set: ";
 
     WriteLog(message, lpValueName, lpData, cbData);
+
+    AccessLog("RegSetValueExA", ++num[0]);
 
     if (!strcmp(lpValueName, "active"))
     {
@@ -85,6 +110,8 @@ LSTATUS WINAPI NewRegQueryValueExA(HKEY hKey, LPCSTR lpValueName, LPDWORD lpRese
 
     WriteLog(message, lpValueName, NULL, 0);
 
+    AccessLog("RegQueryValueExA", ++num[1]);
+
     return TrueRegQueryValueExA(hKey, lpValueName, lpReserved, lpType, lpData, lpcbData);
 }
 
@@ -93,6 +120,8 @@ LSTATUS WINAPI NewRegOpenKeyExA(HKEY hKey, LPCSTR lpSubKey, DWORD ulOptions, REG
     LPCSTR message = "Registry Key Opened: ";
 
     WriteLog(message, lpSubKey, NULL, 0);
+
+    AccessLog("RegOpenKeyExA", ++num[2]);
 
     return TrueRegOpenKeyExA(hKey, lpSubKey, ulOptions, samDesired, phkResult);
 }
@@ -103,6 +132,8 @@ LSTATUS WINAPI NewRegOpenKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
 
     WriteLog(message, lpSubKey, NULL, 0);
 
+    AccessLog("RegOpenKeyA", ++num[3]);
+
     return TrueRegOpenKeyA(hKey, lpSubKey, phkResult);
 }
 
@@ -111,6 +142,8 @@ LSTATUS WINAPI NewRegDeleteValueA(HKEY hKey, LPCSTR lpValueName)
     LPCSTR message = "Registry Key Deleted: ";
 
     WriteLog(message, lpValueName, NULL, 0);
+
+    AccessLog("RegDeleteValueA", ++num[4]);
 
     return TrueRegDeleteValueA(hKey, lpValueName);
 }
@@ -121,11 +154,15 @@ LSTATUS WINAPI NewRegCreateKeyA(HKEY hKey, LPCSTR lpSubKey, PHKEY phkResult)
 
     WriteLog(message, lpSubKey, NULL, 0);
 
+    AccessLog("RegCreateKeyA", ++num[5]);
+
     return TrueRegCreateKeyA(hKey, lpSubKey, phkResult);;
 }
 
 BOOL WINAPI NewEmptyClipboard()
 {
+    AccessLog("EmptyClipboard", ++num[6]);
+
     return 1;
 }
 
@@ -168,21 +205,29 @@ HWND WINAPI NewGetForegroundWindow()
 
 BOOL WINAPI NewTerminateProcess(HANDLE hProcess, UINT uExitCode)
 {
+    AccessLog("TerminateProcess", ++num[7]);
+
     return 1;
 }
 
 BOOL WINAPI NewSetForegroundWindow(HANDLE hWnd)
 {
+    AccessLog("SetForegroundWindow", ++num[8]);
+
     return 1;
 }
 
 HWND WINAPI NewGetForegroundWindow()
 {
+    AccessLog("GetForegroundWindow", ++num[9]);
+
     return FindWindowA("LOCKDOWNCHROME", "Respondus LockDown Browser");
 }
 
 BOOL WINAPI NewShowWindow(HWND hWnd, int  nCmdShow)
 {
+    AccessLog("ShowWindow", ++num[10]);
+
     if (hWnd == FindWindowA("Shell_TrayWnd", ""))
     {
         return 1;
@@ -193,24 +238,32 @@ BOOL WINAPI NewShowWindow(HWND hWnd, int  nCmdShow)
 
 LRESULT NewMouseHook_1(int nCode, WPARAM arg2, LPARAM arg3)
 {
+    AccessLog("MouseHook_1", ++num[11]);
+
     static PVOID* mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
     return CallNextHookEx((HHOOK)*mouseHook, nCode, arg2, arg3);
 }
 
 LRESULT NewMouseHook_2(int nCode, WPARAM arg2, LPARAM arg3)
 {
+    AccessLog("MouseHook_2", ++num[12]);
+
     static PVOID* mouseHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14008);
     return CallNextHookEx((HHOOK)*mouseHook, nCode, arg2, arg3);
 }
 
 LRESULT NewShellHook(int nCode, WPARAM arg2, LPARAM arg3)
 {
+    AccessLog("ShellHook", ++num[13]);
+
     static PVOID* shellHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14004);
     return CallNextHookEx((HHOOK)*shellHook, nCode, arg2, arg3);
 }
 
 LRESULT NewKeyboardHook(int nCode, WPARAM arg2, LPARAM arg3)
 {
+    AccessLog("KeyboardHook", ++num[14]);
+
     static PVOID* keyboardHook = (PVOID*)((DWORD)GetModuleHandle(L"LockDownBrowser.dll") + 0x14000);
     return CallNextHookEx((HHOOK)*keyboardHook, nCode, arg2, arg3);
 }
